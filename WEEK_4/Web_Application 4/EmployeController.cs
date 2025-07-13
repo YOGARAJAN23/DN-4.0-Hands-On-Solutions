@@ -1,56 +1,86 @@
 ﻿
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
+using WebApiProject.Filters;
 
-namespace FirstWebApi.Controllers
+namespace WebApiProject.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ValuesController : ControllerBase
+    [ServiceFilter(typeof(CustomAuthFilter))]
+    public class EmployeeController : ControllerBase
     {
-        private static List<string> values = new List<string> { "value1", "value2" };
+        private List<Employee> _employees;
+
+        public EmployeeController()
+        {
+            _employees = GetStandardEmployeeList();
+        }
+
+        private List<Employee> GetStandardEmployeeList()
+        {
+            return new List<Employee>
+            {
+                new Employee
+                {
+                    Id = 1,
+                    Name = "Prajith",
+                    Salary = 60000,
+                    Permanent = true,
+                    DateOfBirth = new DateTime(1999, 01, 15),
+                    Department = new Department { Id = 101, Name = "HR" },
+                    Skills = new List<Skill>
+                    {
+                        new Skill { Id = 1, Name = "C#" },
+                        new Skill { Id = 2, Name = "SQL" }
+                    }
+                }
+            };
+        }
 
         [HttpGet]
-        public ActionResult<IEnumerable<string>> Get()
+        [ProducesResponseType(typeof(List<Employee>), 200)]
+        public ActionResult<List<Employee>> Get()
         {
-            return Ok(values);
+            return Ok(_employees);
         }
-
-    
-        [HttpGet("{id}")]
-        public ActionResult<string> Get(int id)
-        {
-            if (id < 0 || id >= values.Count)
-                return NotFound("Value not found");
-            return Ok(values[id]);
-        }
-
 
         [HttpPost]
-        public ActionResult Post([FromBody] string value)
+        public IActionResult Post([FromBody] Employee emp)
         {
-            values.Add(value);
-            return Ok("Added");
+            return Ok($"Employee {emp.Name} added");
         }
-
 
         [HttpPut("{id}")]
-        public ActionResult Put(int id, [FromBody] string value)
+        [ProducesResponseType(typeof(Employee), 200)]
+        [ProducesResponseType(400)]
+        public ActionResult<Employee> UpdateEmployee(int id, [FromBody] Employee updatedEmp)
         {
-            if (id < 0 || id >= values.Count)
-                return BadRequest("Invalid ID");
-            values[id] = value;
-            return Ok("Updated");
+            if (id <= 0)
+            {
+                return BadRequest("Invalid employee id");
+            }
+
+            var emp = _employees.FirstOrDefault(e => e.Id == id);
+            if (emp == null)
+            {
+                return BadRequest("Invalid employee id");
+            }
+
+            emp.Name = updatedEmp.Name;
+            emp.Salary = updatedEmp.Salary;
+            emp.Permanent = updatedEmp.Permanent;
+            emp.Department = updatedEmp.Department;
+            emp.Skills = updatedEmp.Skills;
+            emp.DateOfBirth = updatedEmp.DateOfBirth;
+
+            return Ok(emp);
         }
 
-
-        [HttpDelete("{id}")]
-        public ActionResult Delete(int id)
+        [HttpGet("throw")]
+        [ProducesResponseType(500)]
+        public ActionResult<List<Employee>> ThrowError()
         {
-            if (id < 0 || id >= values.Count)
-                return BadRequest("Invalid ID");
-            values.RemoveAt(id);
-            return Ok("Deleted");
+            throw new Exception("Test exception from GET");
         }
     }
 }
